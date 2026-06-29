@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken"
 import bcrypt from "bcryptjs"
 import { verifyEmail } from "../services/verifyEmail.js";
 import { Session } from "../models/session.model.js";
+import { sendOTPMail } from "../services/sendOTPMail.js";
 
 
 export async function register(req,res){
@@ -203,3 +204,185 @@ export const login = async(req,res)=>{
   }
  }
 
+
+export const logout = async(req,res)=>{
+  try{
+
+    const userId = req.id
+    await Session.deleteMany({userId:userId})
+    await User.findByIdAndUpdate(userId,{isLoggedIn:false})
+    return res.status(200).json({
+      message:"Logged out successfully"
+    } 
+    )
+
+    
+  }catch(error){
+    return res.status(400).json({
+      message:error.message
+    })
+  }
+}
+
+export const forgetPassword = async(req,res)=>{
+    try {
+      const {email} = req.body
+     const user = await User.findOne({email})
+
+     if(!user){
+      return res.status(400).json({
+        message:"User not found"
+      })
+     }
+
+     const otp = Math.floor(100000 + Math.random()*900000).toString()
+     otpExpiry = new Date(Date.now()*10*60*1000)   //10min
+
+     user.otp = otp
+     user.otpExpiry = otpExpiry
+     
+     await user.save()
+
+     await sendOTPMail(otp,mail)
+
+     return res.status(200).json({
+      message:"otp sent to email successfully"
+     })
+        
+    } catch (error) {
+      return res.status(400).json({
+        message:error.message
+      })
+    }
+}
+
+export const verifyOTP = async(req,res)=>{
+  try {
+    const {otp} = req.body
+    const email = req.params.email
+    if(!otp){
+      return res.status(400).json({
+        message:"otp is required"
+
+      })
+    }
+
+    const user = await User.findOne({email})
+    if(!user){
+      return res.status(400).json({
+        message:"User not found"
+      } )
+    }
+
+    if(!user.otp || !user.otpExpiry){
+      return res.status(400).json({
+        message:"otp is not generated or already verified"
+      })
+    }
+
+    if(user.otpExpiry < new Date()){
+      return res.status(400).json({
+        message:"otp expired"
+      })
+
+    }
+
+    if(otp !== user.otp){
+      return res.status(400).json({
+        message:"invalid otp"
+      })
+
+    }
+
+    user.otp = null
+    user.otpExpiry = null
+
+    await user.save()
+
+    return res.status(200).json({
+      success:true,
+      message:"otp verified successfully"
+    })
+    
+
+
+  } catch (error) {
+    return res.status(400).json({
+      message:error.message
+    })
+  }
+}
+
+export const changePassword = async(req,res)=>{
+  try{
+          const {newPassword, confirmPassword} = req.body
+          const {email} = req.params.email
+
+          const user = await User.findOne({email})
+          if(!user){
+            return res.status(400).json({
+              message:"user not found"
+            })
+          }
+
+          if(!newPassword || !confirmPassword){
+            return res.status(400).json({
+              message:"All fields are required"
+            })
+
+          }
+          if(newPassword !== confirmPassword){
+            return res.status(400).json({
+              message:"password does not match"
+            })
+          }
+
+          const hashPassword = await bcrypt.hash(newPassword , 10)
+          user.password = hashPassword
+          await user.save()
+
+          return res.status(200).json({
+           message:"password change successfully"
+          })
+  }catch(error){
+
+  }
+
+}
+
+export const allUser = async(_,res)=>{
+  try{
+      const users = await User.find()
+      return res.status(200).json({
+        message:"all users",
+        sucess:true,
+        users
+      })
+  }catch(error){
+     return res.status(500).json({
+      message:error.message
+    })
+  }
+
+}
+
+export const getUserById = async(req,res)=>{
+  try {
+    const {userId} = req.params
+    const user = await User.findById(userId).select("-password -otp -otpExpiry -token")
+
+    if(!user){
+      return res.status(400).json({
+      message:"user not found"
+    })
+    }
+
+    res.status(200).json({
+      message:"user found",
+      user
+    })
+    
+  } catch (error) {
+    
+  }
+}
