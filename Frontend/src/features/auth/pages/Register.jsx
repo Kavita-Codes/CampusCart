@@ -9,14 +9,56 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import axios from "axios"
 import { Eye, EyeOff } from "lucide-react"
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
+import { toast } from "sonner"
 
 
 const Register = () => {
 
-    const [showPassword , setShowPassword] = useState(false)
+   const [showPassword , setShowPassword] = useState(false)
+   const [firstName,setFirstName] = useState("")
+   const [lastName , setLastName] = useState("")
+    const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
+
+
+
+
+  async function handleRegister(e){
+    e.preventDefault()
+    setLoading(true)
+         
+    try{
+  
+       const result = await axios.post("http://localhost:3000/api/auth/register" , {
+        email,
+        password,
+        firstName,
+        lastName
+       },{
+        withCredentials:true
+       })
+
+       console.log(result.data)
+       setLoading(false)
+       navigate("/verify")
+       toast.success(result.data.message)
+
+
+
+    }catch(error){
+      console.log(error)
+      setLoading(false)
+      toast.error(error.response.data.message)
+    }
+
+  }
+
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-purple-200"> 
@@ -39,6 +81,8 @@ const Register = () => {
                 type="firstName"
                 placeholder="Kavi"
                 required
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
               />
             </div>
                <div className="grid gap-2">
@@ -48,6 +92,8 @@ const Register = () => {
                 type="lastName"
                 placeholder="Chauhan"
                 required
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
               />
             </div>
             </div>
@@ -59,13 +105,15 @@ const Register = () => {
                 type="email"
                 placeholder="kavi@example.com"
                 required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="grid gap-2">
               <div className="flex items-center relative ">
                 <Label htmlFor="password">Password</Label>
               </div>
-              <Input id="password" type={showPassword ? "text" : "password"} placeholder="................."  required />
+              <Input id="password" type={showPassword ? "text" : "password"} placeholder="................."  required  value={password} onChange={(e) => setPassword(e.target.value)}/>
               {
                 showPassword ? <EyeOff onClick={() => setShowPassword(false)}/> : <Eye  onClick={() => setShowPassword(true)} />
               }
@@ -74,8 +122,8 @@ const Register = () => {
         </form>
       </CardContent>
       <CardFooter className="flex-col gap-2">
-        <Button type="submit" className="w-full bg-purple-700">
-          Register
+        <Button type="submit" className="w-full bg-purple-700" onClick={handleRegister}>
+         {loading ? "Loading..." : "Register"}
         </Button>
         <div className=" shimmer-color-gray-500">
             Or

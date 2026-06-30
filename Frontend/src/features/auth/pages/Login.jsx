@@ -11,10 +11,48 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Eye, EyeOff } from "lucide-react"
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
+import axios from "axios"
+import { toast } from "sonner"
+
+
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
+
+
+  async function handleLogin(e){
+    e.preventDefault()
+    setLoading(true)
+         
+    try{
+  
+       const result = await axios.post("http://localhost:3000/api/auth/login" , {
+        email,
+        password
+       },{
+        withCredentials:true
+       })
+
+       console.log(result.data)
+       setLoading(false)
+        toast.success(result.data.message)
+       navigate("/")
+
+
+
+    }catch(error){
+      console.log(error)
+      toast.error(error.response.data.message)
+      setLoading(false)
+    }
+
+  }
+
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-purple-200">
@@ -36,6 +74,8 @@ const Login = () => {
                   type="email"
                   placeholder="kavi@example.com"
                   required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
 
@@ -52,6 +92,8 @@ const Login = () => {
                   type={showPassword ? "text" : "password"} 
                   placeholder="••••••••" 
                   required 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
                 <button
                   type="button"
@@ -65,8 +107,8 @@ const Login = () => {
           </form>
         </CardContent>
         <CardFooter className="flex-col gap-2">
-          <Button type="submit" className="w-full bg-purple-700">
-            Login
+          <Button type="submit" className="w-full bg-purple-700" onClick={handleLogin}>
+            {loading ? "Loading..." : "Login"}
           </Button>
           <p className="text-sm">
             Don't have an account?{" "}
